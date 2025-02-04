@@ -19,12 +19,13 @@ productRouter.get("/products", asyncHandler(async (req: Request, res: Response) 
 }));
 
 // productRouter.get("/product/:id", asyncHandler(async (req: Request, res: Response) => {
-//     const product: UnitProduct = await database.findOne(req.params.id);
+//     const product: UnitProduct | null= await database.findOne(req.params.id);
 //     if (!product) {
 //         return res.status(StatusCodes.NOT_FOUND).json({ error: "Product does not exist" });
 //     }
 //     return res.status(StatusCodes.OK).json({ product });
 // }));
+
 productRouter.get("/product/:id", asyncHandler(async (req: Request, res: Response) => {
     const product: UnitProduct | null = await database.findOne(req.params.id);
     if (!product) {

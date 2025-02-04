@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { v4 as random } from "uuid";
 import fs from "fs";
 
+// let users: Users = loadUsers();
 let users: Users = loadUsers();
 
 function loadUsers(): Users {
