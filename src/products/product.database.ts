@@ -1,65 +1,60 @@
-import { Product, Products, UnitProduct } from "./product.interface";
-import { v4 as random } from "uuid";
-import fs from "fs";
+import { Product, UnitProduct } from "./product.interface";
+import mysql from 'mysql2/promise';
 
-let products: Products = loadProducts();
+export const pool = mysql.createPool({
+    host: 'localhost',
+    user: 'root',
+    password: '',
+    database: 'todays',
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+});
 
-function loadProducts(): Products {
-    try {
-        const data = fs.readFileSync('./products.json', "utf-8");
-        return JSON.parse(data);
-    } catch (error) {
-        console.log(`Error ${error}`);
-        return {};
-    }
-}
+export const findAll = async (): Promise<UnitProduct[]> => {
+    const [rows] = await pool.query('SELECT * FROM products');
+    return rows as UnitProduct[];
+};
 
-function saveProducts() {
-    try {
-        fs.writeFileSync('./products.json', JSON.stringify(products), "utf-8");
-        console.log("Products saved successfully!");
-    } catch (error) {
-        console.log("Error", error);
-    }
-}
-
-export const findAll = async (): Promise<UnitProduct[]> => Object.values(products);
-
-export const findOne = async (id: string): Promise<UnitProduct | null> => products[id];
+export const findOne = async (id: number): Promise<UnitProduct | null> => {
+    const [rows]: any = await pool.query('SELECT * FROM products WHERE id = ?', [id]);
+    return rows[0] || null;
+};
 
 export const create = async (productInfo: Product): Promise<UnitProduct | null> => {
-    let id = random();
-    let product = await findOne(id);
-    while (product) {
-        id = random();
-        product = await findOne(id);
-    }
-    products[id] = {
-        id,
+    const [result]: any = await pool.query(
+        'INSERT INTO products (name, price, quantity, image) VALUES (?, ?, ?, ?)',
+        [productInfo.name, productInfo.price, productInfo.quantity, productInfo.image]
+    );
+
+    const product: UnitProduct = {
+        id: result.insertId,
         ...productInfo
     };
-    saveProducts();
-    return products[id];
+
+    return product;
 };
 
-export const update = async (id: string, updateValues: Product): Promise<UnitProduct | null> => {
-    const product = await findOne(id);
-    if (!product) {
+export const update = async (id: number, updateValues: Product): Promise<UnitProduct | null> => {
+    const productExists = await findOne(id);
+    if (!productExists) {
         return null;
     }
-    products[id] = {
-        id,
-        ...updateValues
-    };
-    saveProducts();
-    return products[id];
+
+    await pool.query(
+        'UPDATE products SET name = ?, price = ?, quantity = ?, image = ? WHERE id = ?',
+        [updateValues.name, updateValues.price, updateValues.quantity, updateValues.image, id]
+    );
+
+    return findOne(id);
 };
 
-export const remove = async (id: string): Promise<null | void> => {
+export const remove = async (id: number): Promise<boolean> => {
     const product = await findOne(id);
     if (!product) {
-        return null;
+        return false;
     }
-    delete products[id];
-    saveProducts();
+
+    await pool.query('DELETE FROM products WHERE id = ?', [id]);
+    return true;
 };
